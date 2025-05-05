@@ -2,11 +2,13 @@
 resource "aws_instance" "public" {
   ami                         = data.aws_ami.amazon2023.id
   instance_type               = "t2.micro"
-  subnet_id                   = flatten(data.aws_subnets.public_sub.ids)[0] #ID of 1 of the public subnets
+  subnet_id                   = aws_subnet.public_subnets[0].id  # Use the first public subnet directly
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
   key_name                    = data.aws_key_pair.bastion-key.key_name
   user_data_replace_on_change = true # this forces instance to be recreated upon update of user data contents
+
+  depends_on = [aws_subnet.public_subnets, aws_security_group.allow_ssh]
 
   tags = {
     Name = "estee-bastion" #Change to a name you would want your ec2 to be called
@@ -15,19 +17,17 @@ resource "aws_instance" "public" {
 
 # This resource is used to create a default EC2 instance metadata options
 resource "aws_ec2_instance_metadata_defaults" "enforce-imdsv2" {
-  http_tokens                 = "optional"
+  http_tokens = "optional"
 }
-
-
 
 resource "aws_instance" "private" {
   ami                         = data.aws_ami.amazon2023.id
   instance_type               = "t2.micro"
-  subnet_id                   = flatten(data.aws_subnets.private_sub.ids)[0]     #ID of 1 of the private subnets
-  associate_public_ip_address = true
+  subnet_id                   = aws_subnet.private_subnets[0].id  # Use the first private subnet directly
+  associate_public_ip_address = false
   vpc_security_group_ids      = [aws_security_group.webhost_sg.id]
   key_name                    = data.aws_key_pair.web-key.key_name
- #iam_instance_profile        = aws_iam_instance_profile.example.name
+  #iam_instance_profile        = aws_iam_instance_profile.example.name
   user_data                   = <<EOF
 #!/bin/bash 
 yum update -y 
@@ -39,6 +39,8 @@ systemctl start httpd
 systemctl enable httpd 
 EOF 
   user_data_replace_on_change = true # this forces instance to be recreated upon update of user data contents
+
+  depends_on = [aws_subnet.private_subnets, aws_security_group.webhost_sg]
 
   tags = {
     Name = "estee_tf-ec2-web" #Change to a name you would want your ec2 to be called

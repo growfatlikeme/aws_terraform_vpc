@@ -1,28 +1,3 @@
-#get current VPC ID
-data "aws_vpc" "vpcId" {
-  filter {
-    name   = "tag:Name"
-    values = ["estee_terraform_vpc"]  # Replace with your actual VPC name
-  }
-}
-
-output "vpcid_estee" {
-  value = data.aws_vpc.vpcId.id
-}
-
-#get default route ID
-data "aws_route_table" "defaultRouteID" {
-  vpc_id = data.aws_vpc.vpcId.id
-  filter {
-    name = "association.main"
-    values = ["true"]
-  }
-}
-
-output "defaultroute" {
-  value = data.aws_route_table.defaultRouteID.id
-}
-
 data "aws_ami" "amazon2023" {
   most_recent = true
 
@@ -33,69 +8,32 @@ data "aws_ami" "amazon2023" {
   owners = ["amazon"]
 }
 
-/*
-data "aws_subnets" "public" {
- filter {
-  name = "tag:Name"
-  values = ["Estee Public *"]
- }
+# Use the VPC resource directly instead of data source
+output "vpcid_estee" {
+  value = aws_vpc.my_vpc.id
 }
 
-
-output "test"{
-  value =data.aws_subnets.public.ids
-}
-*/
-
-data "aws_subnets" "public_sub" {
+# Get default route table created with the VPC
+data "aws_route_table" "defaultRouteID" {
+  vpc_id = aws_vpc.my_vpc.id
   filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.vpcId.id]        # Use the dynamically retrieved VPC ID
+    name = "association.main"
+    values = ["true"]
   }
-
-  filter {
-    name   = "map-public-ip-on-launch"
-    values = ["true"]                       # Ensures only public subnets are returned
-  }
+  depends_on = [aws_vpc.my_vpc]
 }
 
-data "aws_subnet" "each_subnet" {
-  for_each = toset(data.aws_subnets.public_sub.ids) # Use the IDs of the public subnets
-
-  id = each.value
+output "defaultroute" {
+  value = data.aws_route_table.defaultRouteID.id
 }
-
-/*
-output "subnet_name" {
-  value = data.aws_subnets.public_sub.tags["Name"]
-}*/
-
-output "subnet_names" {
-  value = { for subnet_id in data.aws_subnet.each_subnet : subnet_id.id => subnet_id.tags["Name"] }
-}
-
-data "aws_subnets" "private_sub" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.vpcId.id]        # Use the dynamically retrieved VPC ID
-  }
-
- filter {
-  name = "tag:Name"
-  values = ["Estee Private *"]
- }
-}
-
 
 data "aws_availability_zones" "available" {
   state = "available"
 }
 
-
-
-#play cheat for now and use console to create key pair
+# Key pairs
 data "aws_key_pair" "bastion-key" {
-  key_name           = "estee-ec2-key"
+  key_name = "estee-ec2-key"
 }
 
 output "bastionkeyname" {
@@ -103,10 +41,25 @@ output "bastionkeyname" {
 }
 
 data "aws_key_pair" "web-key" {
-  key_name           = "estee-privkey"
+  key_name = "estee-privkey"
 }
 
 output "privkeyname" {
   value = data.aws_key_pair.web-key.key_name
 }
 
+# Output subnet information directly from the resources instead of using data sources
+output "public_subnet_ids" {
+  value = aws_subnet.public_subnets[*].id
+}
+
+output "private_subnet_ids" {
+  value = aws_subnet.private_subnets[*].id
+}
+
+output "subnet_names" {
+  value = {
+    for subnet in aws_subnet.public_subnets :
+    subnet.id => subnet.tags["Name"]
+  }
+}
