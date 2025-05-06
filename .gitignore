@@ -1,6 +1,11 @@
 # Local .terraform directories
 .terraform/
 
+# sensitive files
+iam.tf
+key_pair.tf
+
+
 # .tfstate files
 *.tfstate
 *.tfstate.*

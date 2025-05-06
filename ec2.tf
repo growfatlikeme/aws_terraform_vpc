@@ -5,13 +5,17 @@ resource "aws_instance" "public" {
   subnet_id                   = aws_subnet.public_subnets[0].id  # Use the first public subnet directly
   associate_public_ip_address = true
   vpc_security_group_ids      = [aws_security_group.allow_ssh.id]
-  key_name                    = data.aws_key_pair.bastion-key.key_name
+ key_name      = aws_key_pair.bastion_key.key_name  # Link key pair
   user_data_replace_on_change = true # this forces instance to be recreated upon update of user data contents
 
   depends_on = [aws_subnet.public_subnets, aws_security_group.allow_ssh]
 
+    lifecycle {
+    create_before_destroy = true  # Ensures a new instance is created first before old one is removed
+  }
+
   tags = {
-    Name = "estee-bastion" #Change to a name you would want your ec2 to be called
+    Name = "${var.myname}-bastion" #Change to a name you would want your ec2 to be called
   }
 }
 
@@ -26,7 +30,7 @@ resource "aws_instance" "private" {
   subnet_id                   = aws_subnet.private_subnets[0].id  # Use the first private subnet directly
   associate_public_ip_address = false
   vpc_security_group_ids      = [aws_security_group.webhost_sg.id]
-  key_name                    = data.aws_key_pair.web-key.key_name
+ key_name      = aws_key_pair.private_key.key_name  # Link key pair
   #iam_instance_profile        = aws_iam_instance_profile.example.name
   user_data                   = <<EOF
 #!/bin/bash 
@@ -43,6 +47,6 @@ EOF
   depends_on = [aws_subnet.private_subnets, aws_security_group.webhost_sg]
 
   tags = {
-    Name = "estee_tf-ec2-web" #Change to a name you would want your ec2 to be called
+    Name = "${var.myname}_tf-ec2-web" #Change to a name you would want your ec2 to be called
   }
 }

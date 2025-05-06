@@ -2,8 +2,11 @@
 resource "aws_vpc" "my_vpc" {
  cidr_block = var.myvpc_cidr
  
+   enable_dns_support   = true   # Enables DNS resolution
+  enable_dns_hostnames = true   # Enables public DNS hostnames
+
  tags = {
-   Name = "estee_terraform_vpc"
+   Name = "${var.myname}_terraform_vpc"
  }
 }
 
@@ -16,7 +19,7 @@ resource "aws_subnet" "public_subnets" {
  availability_zone = element(var.azs, count.index)
  
  tags = {
-   Name = "Estee Public Subnet ${count.index + 1}"
+   Name = "${var.myname} Public Subnet ${count.index + 1}"
  }
 }
  
@@ -27,7 +30,7 @@ resource "aws_subnet" "private_subnets" {
  availability_zone = element(var.azs, count.index)
   
  tags = {
-   Name = "Estee Private Subnet ${count.index + 1}"
+   Name = "${var.myname} Private Subnet ${count.index + 1}"
  }
 }
 
@@ -38,7 +41,7 @@ resource "aws_subnet" "database_subnets" {
  availability_zone = element(var.azs, count.index)
 
  tags = {
-   Name = "Estee Database Subnet ${count.index + 1}"
+   Name = "${var.myname} Database Subnet ${count.index + 1}"
  }
 }
 
@@ -47,7 +50,7 @@ resource "aws_internet_gateway" "my_igw" {
  vpc_id = aws_vpc.my_vpc.id
  
  tags = {
-   Name = "Estee IGW"
+   Name = "${var.myname} IGW"
  }
 }
 
@@ -61,7 +64,7 @@ resource "aws_route_table" "public_rt" {
  }
  
  tags = {
-   Name = "Estee Public Route Table for Internet Routing"
+   Name = "${var.myname} Public Route Table for Internet Routing"
  }
 }
 
@@ -72,20 +75,24 @@ resource "aws_route_table_association" "public_subnet_asso" {
  route_table_id = aws_route_table.public_rt.id
 }
 
+
+
 #generate EIP for nat GW
 resource "aws_eip" "nat" {
   domain = "vpc"
 }
 
-#Create one NAT Gateway in the first public subnet using the allocated Elastic IP
-resource "aws_nat_gateway" "natgw" {
-  allocation_id = aws_eip.nat.id
-  subnet_id     = aws_subnet.public_subnets[0].id
-  
-  tags = {
-    Name = "estee nat gw"
+
+  #Create one NAT Gateway in the first public subnet using the allocated Elastic IP
+  resource "aws_nat_gateway" "natgw" {
+    allocation_id = aws_eip.nat.id
+    subnet_id     = aws_subnet.public_subnets[0].id
+    
+    tags = {
+      Name = "${var.myname} nat gw"
+    }
   }
-}
+
 
 #Create private route
 resource "aws_route_table" "private_rt" {
@@ -97,9 +104,11 @@ resource "aws_route_table" "private_rt" {
  }
  
  tags = {
-   Name = "Estee nat gw private route"
+   Name = "${var.myname} nat gw private route"
  }
 }
+
+
 
 #associate private  subnets with private route
 resource "aws_route_table_association" "private_subnet_asso" {

@@ -24,7 +24,7 @@ resource "aws_security_group" "allow_ssh" {
   }
 
   tags = {
-    Name = "bastion_ssh"
+    Name = "${var.myname}-bastion_ssh"
   }
 }
 
@@ -57,6 +57,6 @@ resource "aws_security_group" "webhost_sg" {
   }
 
   tags = {
-    Name = "webhost_sg"
+    Name = "${var.myname}-webhost_sg"
   }
 }
